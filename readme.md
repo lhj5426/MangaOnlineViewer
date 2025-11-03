@@ -9,3 +9,7 @@ https://github.com/user-attachments/assets/01083134-9106-4e3a-a7c5-3ea5d68ee3d3
 
 https://github.com/user-attachments/assets/c91d165c-5082-4ab7-8f10-f1f5970945fc
 
+增加左右模式自适应完全隐藏垂直滚动条 让 横向进度滚动条完全刚好出现在显示器的最低部
+
+https://github.com/user-attachments/assets/aa3acd09-40c2-4e6c-b067-c69242bd37e6
+
