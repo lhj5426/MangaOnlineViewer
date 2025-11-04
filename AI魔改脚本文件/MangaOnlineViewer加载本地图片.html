@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang='zh-CN'>
+<head>
+    <meta charset='UTF-8' />
+    <meta content='width=device-width, initial-scale=1.0' name='viewport' />
+    <title>MangaOnlineViewer 脚本</title>
+    <link
+            rel='stylesheet'
+            href='https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css'
+    />
+    <style>
+        /* ZIP文件按钮 - 橘黄色 */
+        #file {
+            background-color: #ff9800;
+            border-color: #ff9800;
+            color: white;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        #file:hover {
+            background-color: #f57c00;
+            border-color: #f57c00;
+        }
+
+        /* 文件夹按钮 - 绿色 */
+        #folder {
+            background-color: #4caf50;
+            border-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        #folder:hover {
+            background-color: #45a049;
+            border-color: #45a049;
+        }
+
+        /* 图片按钮 - 蓝色 */
+        #images {
+            background-color: #2196f3;
+            border-color: #2196f3;
+            color: white;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        #images:hover {
+            background-color: #0b7dda;
+            border-color: #0b7dda;
+        }
+
+        /* 标签样式优化 */
+        label {
+            margin-top: 15px;
+            display: block;
+            font-size: 1.1em;
+        }
+
+        /* 输入框容器 */
+        .file-input-container {
+            margin-bottom: 20px;
+        }
+
+        /* 关键字颜色 */
+        .keyword-zip {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        .keyword-folder {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .keyword-images {
+            color: #2196f3;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<main id='MangaOnlineViewer' class='container'>
+    <h1>MangaOnlineViewer</h1>
+    <div id='LocalTest'>
+        <h2 id='run-test'>运行本地测试</h2>
+        <button type='button' id='test'>运行本地测试</button>
+    </div>
+    <div id='LocalFiles'>
+        <h2>
+            本地文件 (ZIP, CBZ, CBR..., PNGs, JPGs...)
+        </h2>
+        <p>
+            <b>注意</b>：您需要为 tampermonkey "允许访问文件网址"，
+            只需前往浏览器扩展设置。
+        </p>
+        <p>
+            可以读取任何包含图片的 <span class="keyword-zip">zip</span> 文件，并像任何支持的网站一样显示它
+        </p>
+        <div class='file-input-container'>
+            <label for='file'>📦 选择本地 <span class="keyword-zip">zip 文件</span>：</label>
+            <input
+                    type='file'
+                    id='file'
+                    name='file'
+                    class='btn'
+                    accept='.zip, .cbz, .cbr, .7z, .rar'
+                    value=''
+            />
+        </div>
+        <p>注意：您的浏览器将处理 <span class="keyword-zip">zip</span> 文件，不要选择太大的文件！</p>
+
+        <div class='file-input-container'>
+            <label for='folder'><b>或</b> 📁 选择<span class="keyword-folder">包含图片的文件夹</span>：</label>
+            <input
+                    type='file'
+                    id='folder'
+                    name='folder'
+                    class='btn'
+                    webkitdirectory
+                    mozdirectory
+                    directory
+                    value=''
+            />
+        </div>
+
+        <div class='file-input-container'>
+            <label for='images'><b>或</b> 🖼️ 选择<span class="keyword-images">图片</span>：</label>
+            <input
+                    type='file'
+                    id='images'
+                    name='images'
+                    class='btn'
+                    accept='image/*'
+                    multiple
+                    value=''
+            />
+        </div>
+    </div>
+</main>
+<script src='/src/index.ts' type='module'></script>
+</body>
+</html>
