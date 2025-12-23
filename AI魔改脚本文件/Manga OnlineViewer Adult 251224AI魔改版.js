@@ -5145,6 +5145,7 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
     
     let colCount = parseInt(localStorage.getItem('gridColCount') || '4', 10);
     let rowGap = parseInt(localStorage.getItem('gridRowGap') || '8', 10);
+    let borderWidth = parseInt(localStorage.getItem('gridBorderWidth') || '2', 10);
     
     // 创建控制面板
     let controls = document.querySelector('#GridControls');
@@ -5154,11 +5155,15 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
       controls.innerHTML = `
         <div class="grid-control">
           <label>列数: <span id="gridColCountVal">${colCount}</span></label>
-          <input type="range" id="gridColCountInput" min="2" max="8" value="${colCount}">
+          <input type="range" id="gridColCountInput" min="2" max="10" value="${colCount}">
         </div>
         <div class="grid-control">
           <label>间距: <span id="gridRowGapVal">${rowGap}px</span></label>
           <input type="range" id="gridRowGapInput" min="0" max="40" value="${rowGap}">
+        </div>
+        <div class="grid-control">
+          <label>边框: <span id="gridBorderWidthVal">${borderWidth}px</span></label>
+          <input type="range" id="gridBorderWidthInput" min="0" max="10" value="${borderWidth}">
         </div>
       `;
       controls.setAttribute('style',
@@ -5207,92 +5212,180 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
       chapter.parentElement?.insertBefore(gridBox, chapter);
     }
     
-    // 重排函数
-    const reflow = () => {
-      // 重新获取页面确保src是最新的
-      gridOriginalPages = [...chapter.querySelectorAll('.MangaPage')];
-      
-      // 如果还没有页面，延迟重试
-      if (gridOriginalPages.length === 0) {
-        setTimeout(reflow, 300);
+    // 收集图片尺寸信息
+    const imageInfos = [];
+    let pendingLoads = 0;
+    let reflowScheduled = false;
+    
+    const scheduleReflow = () => {
+      if (!reflowScheduled) {
+        reflowScheduled = true;
+        setTimeout(() => {
+          reflowScheduled = false;
+          reflow();
+        }, 100);
+      }
+    };
+    
+    gridOriginalPages.forEach((page, idx) => {
+      const img = page.querySelector('.PageImg');
+      if (!img) {
+        imageInfos.push({ page, idx, ratio: 1, src: '' });
         return;
       }
+      const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+      // 获取图片宽高比
+      let ratio = 1;
+      if (img.naturalWidth && img.naturalHeight) {
+        ratio = img.naturalWidth / img.naturalHeight;
+      } else if (img.width && img.height) {
+        ratio = img.width / img.height;
+      }
       
-      // 隐藏原chapter
-      chapter.style.display = 'none';
+      const info = { page, idx, ratio, src, img };
+      imageInfos.push(info);
       
-      // 清空并设置容器样式 - 使用CSS Grid实现水平对齐的方格布局
+      // 监听图片加载完成，更新比例并重新布局
+      if (!img.complete || img.naturalWidth === 0) {
+        pendingLoads++;
+        img.addEventListener('load', () => {
+          if (img.naturalWidth && img.naturalHeight) {
+            info.ratio = img.naturalWidth / img.naturalHeight;
+            scheduleReflow();
+          }
+        }, { once: true });
+      }
+    });
+    
+    // 存储已创建的DOM元素引用
+    let gridElements = []; // [{wrap, rowDiv, newImg}]
+    let currentColCount = colCount;
+    let gridBuilt = false;
+    
+    // 计算布局参数（不操作DOM）
+    const calcLayout = () => {
+      const containerWidth = gridBox.clientWidth - rowGap * 2;
+      const rows = [];
+      for (let i = 0; i < imageInfos.length; i += colCount) {
+        rows.push(imageInfos.slice(i, i + colCount));
+      }
+      
+      const layoutData = [];
+      let prevRowHeight = 150; // 记录上一行高度
+      
+      rows.forEach((row, rowIdx) => {
+        const totalRatio = row.reduce((sum, item) => sum + item.ratio, 0);
+        const numItems = row.length;
+        const totalSpacing = (numItems - 1) * rowGap;
+        let rowHeight = (containerWidth - totalSpacing) / totalRatio;
+        
+        const isLastRow = rowIdx === rows.length - 1;
+        const isIncomplete = numItems < colCount;
+        
+        // 最后一行不足时，使用前一行的高度，不拉伸
+        if (isLastRow && isIncomplete && rows.length > 1) {
+          rowHeight = prevRowHeight;
+        }
+        
+        rowHeight = Math.max(80, Math.floor(rowHeight));
+        prevRowHeight = rowHeight;
+        
+        row.forEach((item) => {
+          // 最后一行不足时，使用固定宽度而非flex填满
+          const useFixedWidth = isLastRow && isIncomplete;
+          const itemWidth = useFixedWidth ? Math.floor(rowHeight * item.ratio) : 0;
+          layoutData.push({ rowHeight, flex: item.ratio * 100, rowIdx, useFixedWidth, itemWidth });
+        });
+      });
+      return { layoutData, rowCount: rows.length };
+    };
+    
+    // 首次构建DOM
+    const buildGrid = () => {
       gridBox.innerHTML = '';
+      gridElements = [];
+      currentColCount = colCount;
+      
       gridBox.setAttribute('style', 
-        'display:grid !important;' +
-        'grid-template-columns:repeat(' + colCount + ', 1fr) !important;' +
-        'gap:' + rowGap + 'px !important;' +
+        'display:block !important;' +
         'padding:' + rowGap + 'px !important;' +
         'width:100% !important;' +
         'box-sizing:border-box !important;' +
-        'align-items:stretch !important;'
+        'background:#1e1e1e !important;'
       );
       
-      // 分配图片到方格
-      gridOriginalPages.forEach((page, idx) => {
-        const img = page.querySelector('.PageImg');
-        if (!img) return;
+      const { layoutData } = calcLayout();
+      let currentRowIdx = -1;
+      let rowDiv = null;
+      
+      imageInfos.forEach((item, idx) => {
+        const { page, src, img } = item;
+        const layout = layoutData[idx] || { rowHeight: 150, flex: 100, rowIdx: 0, useFixedWidth: false, itemWidth: 0 };
         
-        // 获取图片src
-        const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+        // 新行
+        if (layout.rowIdx !== currentRowIdx) {
+          currentRowIdx = layout.rowIdx;
+          rowDiv = document.createElement('div');
+          rowDiv.className = 'grid-row';
+          rowDiv.setAttribute('style',
+            'display:flex !important;' +
+            'gap:' + rowGap + 'px !important;' +
+            'margin-bottom:' + rowGap + 'px !important;' +
+            'width:100% !important;'
+          );
+          gridBox.appendChild(rowDiv);
+        }
         
-        // 创建包装div - 不设置固定比例，让图片自然撑开高度
         const wrap = document.createElement('div');
+        wrap.className = 'grid-item';
+        wrap.dataset.idx = idx;
+        
+        // 最后一行不足时用固定宽度，否则用flex
+        const widthStyle = layout.useFixedWidth 
+          ? 'width:' + layout.itemWidth + 'px !important;flex:none !important;'
+          : 'flex:' + layout.flex + ' 1 0% !important;';
+        
         wrap.setAttribute('style',
           'position:relative !important;' +
+          widthStyle +
+          'height:' + layout.rowHeight + 'px !important;' +
           'cursor:pointer !important;' +
           'overflow:hidden !important;' +
           'background:#333 !important;' +
           'border-radius:4px !important;' +
-          'line-height:0 !important;'
+          'border:' + borderWidth + 'px solid #fff !important;' +
+          'box-sizing:content-box !important;'
         );
         
-        // 创建新图片元素 - 保持原始比例完整显示
         const newImg = document.createElement('img');
-        if (src) {
-          newImg.src = src;
-        }
+        if (src) newImg.src = src;
         newImg.setAttribute('style',
-          'width:100% !important;' +
-          'height:auto !important;' +
-          'object-fit:contain !important;' +  // 完整显示图片，保持比例
+          'width:auto !important;' +
+          'height:100% !important;' +
           'display:block !important;'
         );
         
-        // 监听原始图片加载，同步更新
-        const updateSrc = () => {
-          const newSrc = img.getAttribute('src') || img.getAttribute('data-src') || '';
-          if (newSrc && newImg.src !== newSrc) {
-            newImg.src = newSrc;
-          }
-        };
-        img.addEventListener('load', updateSrc);
-        const observer = new MutationObserver(updateSrc);
-        observer.observe(img, { attributes: true, attributeFilter: ['src', 'data-src'] });
+        // 监听原始图片加载
+        if (img) {
+          const updateSrc = () => {
+            const newSrc = img.getAttribute('src') || img.getAttribute('data-src') || '';
+            if (newSrc && newImg.src !== newSrc) newImg.src = newSrc;
+            if (img.naturalWidth && img.naturalHeight) {
+              const newRatio = img.naturalWidth / img.naturalHeight;
+              if (Math.abs(item.ratio - newRatio) > 0.01) {
+                item.ratio = newRatio;
+                updateLayout(); // 无感知更新布局
+              }
+            }
+          };
+          img.addEventListener('load', updateSrc);
+          const observer = new MutationObserver(updateSrc);
+          observer.observe(img, { attributes: true, attributeFilter: ['src', 'data-src'] });
+        }
         
         wrap.appendChild(newImg);
         
-        // 添加页码标签
-        const pageNum = document.createElement('div');
-        pageNum.textContent = (idx + 1).toString();
-        pageNum.setAttribute('style',
-          'position:absolute !important;' +
-          'bottom:5px !important;' +
-          'right:5px !important;' +
-          'background:rgba(0,0,0,0.7) !important;' +
-          'color:#fff !important;' +
-          'padding:2px 6px !important;' +
-          'border-radius:3px !important;' +
-          'font-size:12px !important;'
-        );
-        wrap.appendChild(pageNum);
-        
-        // 克隆原始的PageFunctions工具栏
+        // 工具栏
         const originalFunctions = page.querySelector('.PageFunctions');
         if (originalFunctions) {
           const toolbar = originalFunctions.cloneNode(true);
@@ -5306,14 +5399,13 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
             'font-family:monospace !important;'
           );
           
-          // 重新绑定按钮事件
           toolbar.querySelector('.Bookmark')?.addEventListener('click', (e) => {
             e.stopPropagation();
             page.querySelector('.Bookmark')?.click();
           });
           toolbar.querySelector('.ZoomIn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            const currentSrc = newImg.src || img.getAttribute('src') || img.getAttribute('data-src') || '';
+            const currentSrc = newImg.src || img?.getAttribute('src') || img?.getAttribute('data-src') || '';
             if (currentSrc) showGridZoom(currentSrc, idx);
           });
           toolbar.querySelector('.ZoomRestore')?.addEventListener('click', (e) => {
@@ -5348,16 +5440,80 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
           wrap.appendChild(toolbar);
         }
         
-        // 点击显示浮动大图
         wrap.addEventListener('click', () => {
-          const currentSrc = newImg.src || img.getAttribute('src') || img.getAttribute('data-src') || '';
-          if (currentSrc) {
-            showGridZoom(currentSrc, idx);
-          }
+          const currentSrc = newImg.src || img?.getAttribute('src') || img?.getAttribute('data-src') || '';
+          if (currentSrc) showGridZoom(currentSrc, idx);
         });
         
-        gridBox.appendChild(wrap);
+        rowDiv.appendChild(wrap);
+        gridElements.push({ wrap, rowDiv, newImg, item });
       });
+      
+      gridBuilt = true;
+    };
+    
+    // 无感知更新布局（只更新style，不重建DOM）
+    const updateLayout = () => {
+      if (!gridBuilt || gridElements.length === 0) return;
+      
+      const { layoutData } = calcLayout();
+      
+      gridElements.forEach((el, idx) => {
+        const layout = layoutData[idx];
+        if (!layout || !el.wrap) return;
+        
+        // 最后一行不足时用固定宽度，否则用flex
+        if (layout.useFixedWidth) {
+          el.wrap.style.flex = 'none';
+          el.wrap.style.width = layout.itemWidth + 'px';
+        } else {
+          el.wrap.style.flex = layout.flex + ' 1 0%';
+          el.wrap.style.width = '';
+        }
+        el.wrap.style.height = layout.rowHeight + 'px';
+        el.wrap.style.borderWidth = borderWidth + 'px';
+      });
+      
+      // 更新行间距
+      gridBox.querySelectorAll('.grid-row').forEach(row => {
+        row.style.gap = rowGap + 'px';
+        row.style.marginBottom = rowGap + 'px';
+      });
+      gridBox.style.padding = rowGap + 'px';
+    };
+    
+    // 重排函数 - 智能判断是否需要重建
+    const reflow = () => {
+      gridOriginalPages = [...chapter.querySelectorAll('.MangaPage')];
+      
+      if (gridOriginalPages.length === 0) {
+        setTimeout(reflow, 300);
+        return;
+      }
+      
+      // 更新图片信息
+      gridOriginalPages.forEach((page, idx) => {
+        const img = page.querySelector('.PageImg');
+        if (img && imageInfos[idx]) {
+          const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+          imageInfos[idx].src = src;
+          imageInfos[idx].img = img;
+          imageInfos[idx].page = page;
+          if (img.naturalWidth && img.naturalHeight) {
+            imageInfos[idx].ratio = img.naturalWidth / img.naturalHeight;
+          }
+        }
+      });
+      
+      chapter.style.display = 'none';
+      
+      // 列数变化或首次构建需要重建DOM
+      if (!gridBuilt || colCount !== currentColCount) {
+        buildGrid();
+      } else {
+        // 否则只更新布局参数
+        updateLayout();
+      }
     };
     
     // 绑定控制事件
@@ -5375,8 +5531,23 @@ const startButton = "#StartMOV {\n    font-size: 1em;\n    color: #fff;\n    cur
       reflow();
     });
     
+    document.querySelector('#gridBorderWidthInput')?.addEventListener('input', (e) => {
+      borderWidth = parseInt(e.target.value, 10);
+      localStorage.setItem('gridBorderWidth', borderWidth);
+      document.querySelector('#gridBorderWidthVal').textContent = borderWidth + 'px';
+      reflow();
+    });
+    
     // 直接执行reflow
     reflow();
+    
+    // 监听窗口大小变化，重新布局
+    let resizeTimer;
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(reflow, 200);
+    };
+    window.addEventListener('resize', handleResize);
   }
   
   // 方格模式浮动大图预览
