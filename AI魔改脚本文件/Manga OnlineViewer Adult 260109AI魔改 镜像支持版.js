@@ -37,6 +37,7 @@
 // @include       /https?:\/\/(g\.)?(exhentai|e-hentai).org\/s\/.+\/.+/
 // @include       /https?:\/\/ex\.810114\.xyz\/s\/.+\/.+/
 // @include       /https?:\/\/ex\.moonchan\.xyz\/s\/.+\/.+/
+// @include       /https?:\/\/ex\.fangliding\.eu\.org\/s\/.+\/.+/
 // @include       /https?:\/\/(www\.)?fsicomics.com\/.+/
 // @include       /https?:\/\/(www\.)?freeadultcomix.com\/.+/
 // @include       /https?:\/\/(www\.)?gntai.net\/(?!(category|tags|autores))[^/]+\/.+/
@@ -437,7 +438,7 @@
 
   const exhentai = {
     name: ['ExHentai', 'e-Hentai', 'ExHentai镜像'],
-    url: /https?:\/\/((g\.)?(exhentai|e-hentai).org|ex\.810114\.xyz|ex\.moonchan\.xyz)\/s\/.+\/.+/,
+    url: /https?:\/\/((g\.)?(exhentai|e-hentai).org|ex\.810114\.xyz|ex\.moonchan\.xyz|ex\.fangliding\.eu\.org)\/s\/.+\/.+/,
     homepage: ['https://exhentai.org/', 'https://e-hentai.org/', 'https://ex.810114.xyz/'],
     language: [Language.ENGLISH],
     obs: 'May get your IP Banned, use with moderation',
