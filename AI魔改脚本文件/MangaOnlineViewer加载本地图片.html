@@ -115,7 +115,7 @@
         <p>注意：您的浏览器将处理 <span class="keyword-zip">zip</span> 文件，不要选择太大的文件！</p>
 
         <div class='file-input-container'>
-            <label for='folder'><b>或</b> 📁 选择<span class="keyword-folder">包含图片的文件夹</span>：</label>
+            <label for='folder'><b>或</b> 📁 选择<span class="keyword-folder">包含图片的文件夹</span>（支持子文件夹，自动排除cover图片）：</label>
             <input
                     type='file'
                     id='folder'
@@ -129,7 +129,7 @@
         </div>
 
         <div class='file-input-container'>
-            <label for='images'><b>或</b> 🖼️ 选择<span class="keyword-images">图片</span>：</label>
+            <label for='images'><b>或</b> 🖼️ 选择<span class="keyword-images">图片</span>（自动排除cover图片）：</label>
             <input
                     type='file'
                     id='images'
@@ -142,6 +142,99 @@
         </div>
     </div>
 </main>
+<script>
+// 在MangaOnlineViewer脚本加载前，拦截并过滤文件
+(function() {
+    console.log('✅ 文件过滤脚本已加载');
+    
+    // 保存原始的 FileList
+    const originalFileListGetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files').get;
+    
+    // 创建过滤后的 FileList
+    function createFilteredFileList(files) {
+        const filteredFiles = Array.from(files).filter(file => {
+            // 只保留图片文件
+            if (!file.type.startsWith('image/')) {
+                console.log('⏭️ 跳过非图片文件:', file.name);
+                return false;
+            }
+            
+            // 排除文件名包含 cover 的图片（不区分大小写）
+            if (file.name.toLowerCase().includes('cover')) {
+                console.log('🚫 排除cover图片:', file.name);
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // 按路径排序
+        filteredFiles.sort((a, b) => {
+            const pathA = a.webkitRelativePath || a.name;
+            const pathB = b.webkitRelativePath || b.name;
+            return pathA.localeCompare(pathB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+        
+        console.log(`✅ 过滤完成: ${files.length} 个文件 → ${filteredFiles.length} 张图片`);
+        
+        // 创建新的 FileList 对象
+        const dataTransfer = new DataTransfer();
+        filteredFiles.forEach(file => dataTransfer.items.add(file));
+        return dataTransfer.files;
+    }
+    
+    // 监听文件夹选择
+    document.addEventListener('DOMContentLoaded', function() {
+        const folderInput = document.getElementById('folder');
+        const imagesInput = document.getElementById('images');
+        
+        if (folderInput) {
+            folderInput.addEventListener('change', function(e) {
+                console.log('📂 文件夹选择事件触发');
+                const originalFiles = originalFileListGetter.call(this);
+                console.log('📊 原始文件数:', originalFiles.length);
+                
+                if (originalFiles.length > 0) {
+                    const filteredFiles = createFilteredFileList(originalFiles);
+                    
+                    // 替换 files 属性
+                    Object.defineProperty(this, 'files', {
+                        value: filteredFiles,
+                        writable: false,
+                        configurable: true
+                    });
+                    
+                    console.log('📊 过滤后文件数:', filteredFiles.length);
+                    if (filteredFiles.length > 0) {
+                        console.log('图片列表:', Array.from(filteredFiles).map(f => f.webkitRelativePath || f.name));
+                    }
+                }
+            }, true); // 使用捕获阶段，确保在其他监听器之前执行
+        }
+        
+        if (imagesInput) {
+            imagesInput.addEventListener('change', function(e) {
+                console.log('🖼️ 图片选择事件触发');
+                const originalFiles = originalFileListGetter.call(this);
+                console.log('📊 原始文件数:', originalFiles.length);
+                
+                if (originalFiles.length > 0) {
+                    const filteredFiles = createFilteredFileList(originalFiles);
+                    
+                    // 替换 files 属性
+                    Object.defineProperty(this, 'files', {
+                        value: filteredFiles,
+                        writable: false,
+                        configurable: true
+                    });
+                    
+                    console.log('📊 过滤后文件数:', filteredFiles.length);
+                }
+            }, true);
+        }
+    });
+})();
+</script>
 <script src='/src/index.ts' type='module'></script>
 </body>
 </html>
