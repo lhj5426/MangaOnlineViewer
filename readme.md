@@ -7,7 +7,8 @@
 
 现在的浏览器都可以对开双页 Vivaldi浏览器甚至可以对开N页 一次加载几百张 不如分批次加载
 
-为可多开的浏览器 增加 批次计算功能
+为浏览器平铺窗口 增加 批次计算功能
 
-<img width="1916" height="1026" alt="image" src="https://github.com/user-attachments/assets/e9dd84f8-3dd0-4c6e-9c6e-0452cf5c1518" />
+<img width="1895" height="1040" alt="image" src="https://github.com/user-attachments/assets/2eee4875-4a9d-40a8-a7e8-3f2ddbd57972" />
+
 
