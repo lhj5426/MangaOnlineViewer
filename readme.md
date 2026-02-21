@@ -9,6 +9,5 @@
 
 为浏览器平铺窗口 增加 批次计算功能
 
-<img width="1895" height="1040" alt="image" src="https://github.com/user-attachments/assets/2eee4875-4a9d-40a8-a7e8-3f2ddbd57972" />
-
+https://github.com/user-attachments/assets/4810e2ad-9ce4-4786-8df7-09f281809e0e
 
