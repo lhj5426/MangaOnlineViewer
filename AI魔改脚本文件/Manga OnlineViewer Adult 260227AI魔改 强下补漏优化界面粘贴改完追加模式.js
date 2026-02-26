@@ -5093,13 +5093,14 @@
       }
 
       if (unloadedPages.length === 0) {
-        this.textContent = '✓ 全部已加载(0)';
+        this.textContent = '📋 ✓ 全部已加载(0)';
         this.style.background = '#4CAF50';
         return;
       }
 
+      const text = unloadedPages.sort((a, b) => a - b).join(',');
       navigator.clipboard.writeText(text).then(() => {
-        this.textContent = `✓ 已复制 ${unloadedPages.length} 页`;
+        this.textContent = `📋 ✓ 已复制 ${unloadedPages.length} 页`;
         this.style.background = '#4CAF50';
       }).catch(() => {
         // fallback
@@ -5109,7 +5110,7 @@
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        this.textContent = `✓ 已复制 ${unloadedPages.length} 页`;
+        this.textContent = `📋 ✓ 已复制 ${unloadedPages.length} 页`;
         this.style.background = '#4CAF50';
       });
     });
