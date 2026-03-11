@@ -1,12 +1,12 @@
 ﻿// ==UserScript==
-// @name          Manga OnlineViewer Adult 260309AI魔改 拆分启动按钮
+// @name          Manga OnlineViewer Adult 260311AI魔改 优化打开界面速度
 // @author        Tago
 // @updateURL     https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.meta.js
 // @downloadURL   https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.user.js
 // @supportURL    https://github.com/TagoDR/MangaOnlineViewer/issues
 // @namespace     https://github.com/TagoDR
 // @description   Shows all pages at once in online view for these sites: AkumaMoe, BestPornComix, DoujinMoeNM, Dragon Translation, 8Muses.com, 8Muses.io, ExHentai, e-Hentai, FSIComics, FreeAdultComix, GNTAI.net, Hentai2Read, HentaiEra, HentaiForce, HentaiFox, HentaiHand, nHentai.com, HentaIHere, HentaiNexus, HenTalk, Hitomi, Imhentai, KingComix, Chochox, Comics18, Luscious, MultPorn, MyHentaiGallery, nHentai.net, nHentai.xxx, lhentai, 9Hentai, PornComicsHD, Pururin, SchaleNetwork, Simply-Hentai, TMOHentai, 3Hentai, HentaiVox, Tsumino, vermangasporno, vercomicsporno, wnacg, XlecxOne, xyzcomics, Yabai, Madara WordPress Plugin, AllPornComic, Manytoon, Manga District
-// @version       2026.03.09
+// @version       2026.03.11
 // @license       MIT
 // @icon          https://cdn-icons-png.flaticon.com/32/9824/9824312.png
 // @run-at        document-end
@@ -8251,8 +8251,9 @@
     }
     return val;
   }
-  async function lateStart(site, begin = 1) {
-    const manga = await site.run();
+  async function lateStart(site, begin = 1, existingManga = null) {
+    // 如果已经有manga数据，直接使用；否则才调用site.run()
+    const manga = existingManga || await site.run();
     logScript('LateStart');
     let beginPage = begin;
     let endPage = manga.pages;
@@ -9022,6 +9023,14 @@
                       pasteInput.value = clipText;
                     }
                     updateFromInput(); // 触发解析
+                    
+                    // 粘贴完成后自动点击确定按钮（3秒延迟）
+                    setTimeout(() => {
+                      const confirmBtn = document.querySelector('.swal2-confirm');
+                      if (confirmBtn) {
+                        confirmBtn.click();
+                      }
+                    }, 3000);
                   }
                 } catch (e) {
                   // 如果无法读取剪贴板（权限问题），提示用户手动粘贴
@@ -9074,7 +9083,7 @@
       }
     });
   }
-  function createLateStartButton(site, beginning) {
+  function createLateStartButton(site, beginning, manga = null) {
     // 创建按钮容器
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'StartMOVContainer';
@@ -9087,9 +9096,9 @@
     quickButton.className = 'mov-button';
     quickButton.onclick = async () => {
       try {
-        const manga = await site.run();
-        manga.begin = beginning || manga.begin || 1;
-        viewer(manga).then(() => logScript('Page loaded (Quick Start)'));
+        const mangaData = manga || await site.run();
+        mangaData.begin = beginning || mangaData.begin || 1;
+        viewer(mangaData).then(() => logScript('Page loaded (Quick Start)'));
       } catch (error) {
         logScript('Quick start error:', error);
       }
@@ -9102,7 +9111,7 @@
     settingsButton.title = '打开启动界面';
     settingsButton.className = 'mov-button';
     settingsButton.onclick = () => {
-      lateStart(site, beginning).catch(logScript);
+      lateStart(site, beginning, manga).catch(logScript);
     };
     
     buttonContainer.appendChild(quickButton);
@@ -9128,7 +9137,7 @@
       if (result.value || result.dismiss === Swal.DismissReason.timer) {
         viewer(manga).then(() => logScript('Page loaded'));
       } else {
-        createLateStartButton(site, manga.begin ?? 0);
+        createLateStartButton(site, manga.begin ?? 0, manga);
         logScript(result.dismiss);
       }
     });
@@ -9153,7 +9162,7 @@
     });
     switch (site.start ?? getSettingsValue('loadMode')) {
       case 'never':
-        createLateStartButton(site, manga.begin);
+        createLateStartButton(site, manga.begin, manga);
         break;
       case 'always':
         viewer(manga).then(() => logScript('Page loaded'));
