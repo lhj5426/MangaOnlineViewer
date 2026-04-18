@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name          Manga OnlineViewer Adult 260418AI魔改 批次乘数增加鼠标滚轮跳转
+// @name          Manga OnlineViewer Adult 260418AI魔改 批次乘数增加下拉预设菜单
 // @author        Tago
 // @updateURL     https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.meta.js
 // @downloadURL   https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.user.js
@@ -8407,16 +8407,36 @@
                   readonly
                 />
                 <span>÷</span>
-                <input
-                  type="number"
-                  id="batchDivide"
-                  class="pageInput"
-                  min="2"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  style="width: 60px;"
-                  value="2"
-                />
+                <div id="batchDivideControl" style="position: relative; display: inline-block; width: 60px; min-width: 60px; max-width: 60px;">
+                  <input
+                    type="text"
+                    id="batchDivide"
+                    class="pageInput"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    style="width: 100%; max-width: none; padding-right: 18px; box-sizing: border-box;"
+                    value="2"
+                  />
+                  <button
+                    type="button"
+                    id="batchDivideToggle"
+                    style="position: absolute; top: 50%; right: 2px; transform: translateY(-50%); width: 16px; height: 24px; padding: 0; border: none; background: transparent; color: #333; cursor: pointer; font-size: 10px; line-height: 1;"
+                    title="选择预设批次"
+                  >v</button>
+                  <div
+                    id="batchDivideMenu"
+                    style="display: none; position: absolute; top: calc(100% + 3px); left: 0; width: 100%; background: #fff; border: 1px solid #2196f3; border-radius: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18); z-index: 9999; overflow: hidden;"
+                  >
+                    <button type="button" class="batch-divide-option" data-value="2" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">2</button>
+                    <button type="button" class="batch-divide-option" data-value="3" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">3</button>
+                    <button type="button" class="batch-divide-option" data-value="4" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">4</button>
+                    <button type="button" class="batch-divide-option" data-value="5" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">5</button>
+                    <button type="button" class="batch-divide-option" data-value="6" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">6</button>
+                    <button type="button" class="batch-divide-option" data-value="7" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">7</button>
+                    <button type="button" class="batch-divide-option" data-value="8" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">8</button>
+                    <button type="button" class="batch-divide-option" data-value="9" style="display: block; width: 100%; padding: 4px 0; border: none; background: #fff; color: #111; cursor: pointer; text-align: center; font-size: 14px; line-height: 1.2; font-weight: 600; transition: background 0.15s, color 0.15s, transform 0.08s;" onmouseover="this.style.background='#2196f3';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='#111'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">9</button>
+                  </div>
+                </div>
                 <span>=</span>
                 <input
                   type="number"
@@ -8838,11 +8858,37 @@
           pageAddInput?.addEventListener('keyup', changedAddInput);
 
           // 批次计算器事件
+          
           const batchDivideInput = document.getElementById('batchDivide');
+          const batchDivideControl = document.getElementById('batchDivideControl');
+          const batchDivideToggle = document.getElementById('batchDivideToggle');
+          const batchDivideMenu = document.getElementById('batchDivideMenu');
           batchDivideInput?.addEventListener('change', updateBatchCalculator);
           batchDivideInput?.addEventListener('keyup', updateBatchCalculator);
           batchDivideInput?.addEventListener('input', updateBatchCalculator);
-          attachNumberWheelStepper(batchDivideInput, updateBatchCalculator);
+          batchDivideToggle?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!batchDivideMenu) return;
+            batchDivideMenu.style.display =
+              batchDivideMenu.style.display === 'block' ? 'none' : 'block';
+          });
+          batchDivideMenu?.addEventListener('click', function (e) {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            const option = target.closest('.batch-divide-option');
+            if (!(option instanceof HTMLElement) || !batchDivideInput) return;
+            batchDivideInput.value = option.dataset.value || '2';
+            batchDivideMenu.style.display = 'none';
+            updateBatchCalculator();
+            batchDivideInput.focus();
+          });
+          document.addEventListener('click', function (e) {
+            if (!batchDivideControl || !batchDivideMenu) return;
+            if (!batchDivideControl.contains(e.target)) {
+              batchDivideMenu.style.display = 'none';
+            }
+          });
 
           // 初始化批次计算器
           updateBatchCalculator();
