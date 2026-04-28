@@ -1,12 +1,10 @@
 // ==UserScript==
-// @name          Manga OnlineViewer Adult 260426AI魔改 优化超长标题点击图片关闭悬浮
+// @name          Manga OnlineViewer Adult 260428AI魔改 添加停止加载提示
 // @author        Tago
-// @updateURL     https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.meta.js
-// @downloadURL   https://github.com/TagoDR/MangaOnlineViewer/raw/master/dist/Manga_OnlineViewer_Adult.user.js
 // @supportURL    https://github.com/TagoDR/MangaOnlineViewer/issues
 // @namespace     https://github.com/TagoDR
 // @description   Shows all pages at once in online view for these sites: AkumaMoe, BestPornComix, DoujinMoeNM, Dragon Translation, 8Muses.com, 8Muses.io, ExHentai, e-Hentai, FSIComics, FreeAdultComix, GNTAI.net, Hentai2Read, HentaiEra, HentaiForce, HentaiFox, HentaiHand, nHentai.com, HentaIHere, HentaiNexus, HenTalk, Hitomi, Imhentai, KingComix, Chochox, Comics18, Luscious, MultPorn, MyHentaiGallery, nHentai.net, nHentai.xxx, lhentai, 9Hentai, PornComicsHD, Pururin, SchaleNetwork, Simply-Hentai, TMOHentai, 3Hentai, HentaiVox, Tsumino, vermangasporno, vercomicsporno, wnacg, XlecxOne, xyzcomics, Yabai, Madara WordPress Plugin, AllPornComic, Manytoon, Manga District
-// @version       2026.04.26
+// @version       2026.04.28
 // @license       MIT
 // @icon          https://cdn-icons-png.flaticon.com/32/9824/9824312.png
 // @run-at        document-end
@@ -3189,6 +3187,81 @@
     }
     downloadBtn?.classList.remove('disabled');
   }
+  function clearLoadStallTimer() {
+    if (nprogressStallTimer) {
+      clearTimeout(nprogressStallTimer);
+      nprogressStallTimer = null;
+    }
+  }
+  function getLoadStallNotice() {
+    let notice = document.getElementById('LoadStallNotice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'LoadStallNotice';
+      notice.setAttribute(
+        'style',
+        [
+          'position:fixed',
+          'left:12px',
+          'top:96px',
+          'z-index:1065',
+          'max-width:260px',
+          'padding:10px 12px',
+          'border-left:4px solid #ff4d6d',
+          'border-radius:8px',
+          'background:rgba(34,34,34,0.96)',
+          'color:#fff',
+          'font-size:14px',
+          'line-height:1.45',
+          'box-shadow:0 8px 24px rgba(0,0,0,0.35)',
+          'pointer-events:auto',
+          'cursor:pointer',
+          'white-space:normal',
+          'word-break:break-word',
+          'display:none',
+        ].join(';'),
+      );
+      notice.title = '点击关闭提示';
+      notice.addEventListener('click', () => {
+        hideLoadStallNotice();
+      });
+      document.body.appendChild(notice);
+    }
+    return notice;
+  }
+  function hideLoadStallNotice() {
+    const notice = document.getElementById('LoadStallNotice');
+    if (notice) {
+      notice.style.display = 'none';
+      notice.innerHTML = '';
+    }
+  }
+  function showLoadStallToast(stalledMs) {
+    if (hasShownLoadStallToast) return;
+    hasShownLoadStallToast = true;
+    const seconds = Math.max(LOAD_STALL_TIMEOUT / 1000, Math.floor(stalledMs / 1000));
+    const notice = getLoadStallNotice();
+    notice.innerHTML = `脚本停止加载<br>已 ${seconds} 秒没有新进度<br>请强下后再执行跳页加载`;
+    notice.style.display = 'block';
+  }
+  function scheduleLoadStallCheck() {
+    clearLoadStallTimer();
+    if (latestNProgressState.total <= 0 || latestNProgressState.loaded >= latestNProgressState.total) return;
+    nprogressStallTimer = setTimeout(() => {
+      const stalledMs = Date.now() - lastNProgressAt;
+      if (latestNProgressState.loaded < latestNProgressState.total && stalledMs >= LOAD_STALL_TIMEOUT) {
+        showLoadStallToast(stalledMs);
+      }
+    }, LOAD_STALL_TIMEOUT + 200);
+  }
+  function resetLoadStallTracking() {
+    clearLoadStallTimer();
+    lastNProgressKey = '';
+    lastNProgressAt = Date.now();
+    latestNProgressState = { loaded: 0, total: 0, unloaded: 0 };
+    hasShownLoadStallToast = false;
+    hideLoadStallNotice();
+  }
   function updateProgress() {
     // 修复：无论在哪种视图模式下都能正确计数
     // 优先从原始Chapter容器中获取图片状态
@@ -3231,9 +3304,24 @@
       }
     }
 
+    const actualTotal = total;
+
     // 防止除零错误
     if (total === 0) {
       total = 1;
+    }
+
+    const progressKey = `${loaded}/${actualTotal}/${unloadedPages.length}`;
+    latestNProgressState = {
+      loaded,
+      total: actualTotal,
+      unloaded: unloadedPages.length,
+    };
+    if (progressKey !== lastNProgressKey) {
+      lastNProgressKey = progressKey;
+      lastNProgressAt = Date.now();
+      hasShownLoadStallToast = false;
+      hideLoadStallNotice();
     }
 
     const percentage = Math.floor((loaded / total) * 100);
@@ -3253,12 +3341,16 @@
       showSpinner: false,
     }).set(loaded / total);
     logScript(`Progress: ${percentage}%`);
-    if (loaded === total && total >= 1) {
+    if (actualTotal > 0 && loaded === actualTotal) {
+      clearLoadStallTimer();
+      hideLoadStallNotice();
       // 修复：添加延迟确保所有图片的 blob 缓存都已完成
       // 特别是在跳页加载模式下，图片可能异步加载，需要等待缓存完成
       setTimeout(() => {
         onImagesDone();
       }, 800);
+    } else if (actualTotal > 0 && loaded < actualTotal) {
+      scheduleLoadStallCheck();
     }
   }
 
@@ -4685,6 +4777,7 @@
   }
   function loadManga(manga, begin = 1) {
     logScript('Loading Images');
+    resetLoadStallTracking();
     logScript(
       `Intervals: ${manga.timer ?? getSettingsValue('throttlePageLoad') ?? 'Default(1000)'}`,
     );
@@ -5699,6 +5792,13 @@
   // 跳页加载模式：存储需要加载的页码列表
   let skipLoadMode = false;  // 是否启用跳页加载模式
   let skipLoadPages = [];    // 需要加载的页码数组
+  let currentBatchLoadInfo = null; // 仅连续批次加载时使用的标题前缀信息
+  const LOAD_STALL_TIMEOUT = 15000;
+  let nprogressStallTimer = null;
+  let lastNProgressKey = '';
+  let lastNProgressAt = 0;
+  let latestNProgressState = { loaded: 0, total: 0, unloaded: 0 };
+  let hasShownLoadStallToast = false;
   
   // 防止重复打包的全局锁
   let isDownloading = false;
@@ -8094,14 +8194,14 @@
       <div class="ViewerTitle">
         <h1
           id="MangaTitle"
-          title="${manga.title}"
+          title="${manga.displayTitle ?? manga.title}"
           tabindex="0"
           role="button"
           aria-expanded="false"
         >
-          ${manga.title}
+          ${manga.displayTitle ?? manga.title}
         </h1>
-        <div id="MangaTitlePopup">${manga.title}</div>
+        <div id="MangaTitlePopup">${manga.displayTitle ?? manga.title}</div>
         <a
           id="series"
           href="${manga.series ?? ''}"
@@ -9307,7 +9407,32 @@
     `;
   }
 
+  function setCurrentBatchLoadInfo(batch, begin, end) {
+    if ([batch, begin, end].some(value => Number.isNaN(value))) return;
+    currentBatchLoadInfo = { batch, begin, end };
+  }
+
+  function setBatchCalculatorCurrentTitle(batchNum) {
+    const batchCalculatorTitle = document.getElementById('batchCalculatorTitle');
+    if (!batchCalculatorTitle || Number.isNaN(batchNum)) return;
+    batchCalculatorTitle.innerHTML = `当前第【<span style="color: #ff1493; font-weight: 800;">${batchNum}</span>】批`;
+  }
+
+  function getDisplayedMangaTitle(manga, batchInfo = currentBatchLoadInfo) {
+    if (!batchInfo || skipLoadMode) return manga.title;
+    const begin = manga.begin ?? batchInfo.begin;
+    const end = manga.pages ?? batchInfo.end;
+    if (batchInfo.begin !== begin || batchInfo.end !== end) return manga.title;
+    return `【批次${batchInfo.batch}】【${batchInfo.begin}-${batchInfo.end}】${manga.title}`;
+  }
+
+  function updateDisplayedMangaTitle(manga, batchInfo = currentBatchLoadInfo) {
+    manga.displayTitle = getDisplayedMangaTitle(manga, batchInfo);
+    return manga.displayTitle;
+  }
+
   function display(manga) {
+    updateDisplayedMangaTitle(manga);
     cleanUpElement(document.documentElement, document.head, document.body);
     document.documentElement.classList.add(getSettingsValue('colorScheme'));
     document.documentElement.setAttribute('data-theme', getSettingsValue('theme'));
@@ -9946,23 +10071,20 @@
                   const addValue = endPage - currentBegin;
                   pageAddInput.value = addValue.toString();
                   changedAddInput();
+                  setCurrentBatchLoadInfo(batchNum, currentBegin, endPage);
 
                   // 第一批点击填入后，也把计算器归零
                   const batchTotalInput = document.getElementById('batchTotal');
                   const batchDivideInput = document.getElementById('batchDivide');
                   const batchResultInput = document.getElementById('batchResult');
                   const batchInfoDiv = document.getElementById('batchInfo');
-                  const batchCalculatorTitle = document.getElementById('batchCalculatorTitle');
-
                   if (batchTotalInput) batchTotalInput.value = '0';
                   if (batchDivideInput) batchDivideInput.value = '0';
                   if (batchResultInput) batchResultInput.value = '0';
                   if (batchInfoDiv) batchInfoDiv.style.display = 'none';
 
                   // 更新标题显示当前批次号
-                  if (batchCalculatorTitle && !isNaN(batchNum)) {
-                    batchCalculatorTitle.textContent = `当前第 ${batchNum} 批`;
-                  }
+                  setBatchCalculatorCurrentTitle(batchNum);
 
                   target.textContent = '✓已填入';
                   target.style.background = '#45a049';
@@ -9976,27 +10098,26 @@
                 const batchNum = parseInt(target.getAttribute('data-batch'), 10);
 
                 if (batchStart && pageCount && pageBeginInput && pageAddInput) {
-                  beginPage = parseInt(batchStart, 10);
+                  const batchStartNum = parseInt(batchStart, 10);
+                  const pageCountNum = parseInt(pageCount, 10);
+                  beginPage = batchStartNum;
                   pageBeginInput.value = batchStart;
                   pageAddInput.value = pageCount;
                   changedAddInput();
+                  setCurrentBatchLoadInfo(batchNum, batchStartNum, batchStartNum + pageCountNum);
 
                   // 手动清空批次计算器
                   const batchTotalInput = document.getElementById('batchTotal');
                   const batchDivideInput = document.getElementById('batchDivide');
                   const batchResultInput = document.getElementById('batchResult');
                   const batchInfoDiv = document.getElementById('batchInfo');
-                  const batchCalculatorTitle = document.getElementById('batchCalculatorTitle');
-
                   if (batchTotalInput) batchTotalInput.value = '0';
                   if (batchDivideInput) batchDivideInput.value = '0';
                   if (batchResultInput) batchResultInput.value = '0';
                   if (batchInfoDiv) batchInfoDiv.style.display = 'none';
 
                   // 更新标题显示当前批次号
-                  if (batchCalculatorTitle && !isNaN(batchNum)) {
-                    batchCalculatorTitle.textContent = `当前第 ${batchNum} 批`;
-                  }
+                  setBatchCalculatorCurrentTitle(batchNum);
 
                   target.textContent = '✓已填入';
                   target.style.background = '#e68900';
@@ -10190,6 +10311,7 @@
                 // 设置全局变量
                 skipLoadMode = true;
                 skipLoadPages = uniquePages;
+                currentBatchLoadInfo = null;
 
                 // 设置页面范围为1到最大页（但实际只加载列表中的页）
                 const firstPage = uniquePages[0];
@@ -10394,6 +10516,7 @@
         logScript(`Choice: ${beginPage} - ${endPage}, Scope: ${selectedScope}, ViewMode: ${selectedViewMode}`);
         manga.begin = beginPage;
         manga.pages = endPage;
+        updateDisplayedMangaTitle(manga);
         viewer(manga).then(() => logScript('Page loaded'));
       } else {
         logScript(result.dismiss);
@@ -10414,7 +10537,9 @@
     quickButton.onclick = async () => {
       try {
         const mangaData = manga || await site.run();
+        currentBatchLoadInfo = null;
         mangaData.begin = beginning || mangaData.begin || 1;
+        updateDisplayedMangaTitle(mangaData);
         viewer(mangaData).then(() => logScript('Page loaded (Quick Start)'));
       } catch (error) {
         logScript('Quick start error:', error);
@@ -10452,6 +10577,8 @@
       timer: 3e3,
     }).then(result => {
       if (result.value || result.dismiss === Swal.DismissReason.timer) {
+        currentBatchLoadInfo = null;
+        updateDisplayedMangaTitle(manga);
         viewer(manga).then(() => logScript('Page loaded'));
       } else {
         createLateStartButton(site, manga.begin ?? 0, manga);
@@ -10475,6 +10602,8 @@
       if (endPage !== void 0) {
         manga.pages = endPage;
       }
+      currentBatchLoadInfo = null;
+      updateDisplayedMangaTitle(manga);
       viewer(manga).then(() => logScript('Page loaded'));
     });
     switch (site.start ?? getSettingsValue('loadMode')) {
