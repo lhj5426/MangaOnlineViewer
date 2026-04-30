@@ -5793,7 +5793,7 @@
   let skipLoadMode = false;  // 是否启用跳页加载模式
   let skipLoadPages = [];    // 需要加载的页码数组
   let currentBatchLoadInfo = null; // 仅连续批次加载时使用的标题前缀信息
-  const LOAD_STALL_TIMEOUT = 15000;
+  const LOAD_STALL_TIMEOUT = 8000;
   let nprogressStallTimer = null;
   let lastNProgressKey = '';
   let lastNProgressAt = 0;
